@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ES STORE | Control Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;400;700;900&display=swap');
+        
+        body {
+            font-family: 'Cairo', sans-serif;
+            margin: 0; padding: 0;
+            background-color: #000; color: #fff;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), 
+                              url('https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover; background-position: center; z-index: -1;
+        }
+
+        .liquid-glass {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 2rem;
+        }
+
+        .nav-glass {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .view-hidden { display: none !important; }
+        
+        .cat-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); transition: 0.3s; }
+        .cat-btn.active { background: #fff; color: #000; }
+
+        #cart-sidebar { transition: transform 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 100; }
+        .cart-open { transform: translateX(0) !important; }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        .tab-btn { opacity: 0.4; transition: 0.3s; cursor: pointer; }
+        .tab-btn.active { opacity: 1; border-bottom: 2px solid white; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full z-[70] nav-glass px-6 py-5 flex justify-between items-center">
+        <h1 id="logo-btn" class="text-3xl font-black tracking-tighter cursor-pointer select-none active:scale-90 transition">
+            E<span class="text-zinc-600">s</span>
+        </h1>
+        
+        <div class="flex items-center gap-4">
+            <button onclick="toggleCart(true)" class="relative p-2">
+                <i class="fas fa-shopping-bag text-xl"></i>
+                <span id="cart-badge" class="absolute -top-1 -right-1 bg-white text-black text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Cart Drawer -->
+    <div id="cart-sidebar" class="fixed top-0 left-0 w-full md:w-[400px] h-full bg-black/90 backdrop-blur-3xl border-r border-white/10 p-8 flex flex-col translate-x-full">
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-2xl font-black italic">حقيبة التسوق</h2>
+            <button onclick="toggleCart(false)" class="text-2xl"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="cart-items" class="flex-1 overflow-y-auto scrollbar-hide space-y-4"></div>
+        <div class="mt-8 pt-8 border-t border-white/10">
+            <div class="flex justify-between items-center mb-6">
+                <span class="opacity-50 font-bold text-xs uppercase">الإجمالي</span>
+                <span id="cart-total" class="text-2xl font-black">0 EGP</span>
+            </div>
+            <button onclick="placeOrder()" class="w-full bg-white text-black py-5 rounded-2xl font-black uppercase text-xs">إرسال الطلب</button>
+        </div>
+    </div>
+
+    <!-- User Section -->
+    <div id="user-view">
+        <header class="h-[60vh] flex flex-col items-center justify-center text-center px-6">
+            <h2 class="text-7xl md:text-9xl font-black mb-4 tracking-tighter italic">ES STORE</h2>
+            <p class="text-zinc-500 font-bold uppercase tracking-[0.5em] text-[10px] mb-8">Ultimate Men's Experience</p>
+        </header>
+
+        <section class="py-10 px-6 max-w-7xl mx-auto">
+            <div id="category-bar" class="flex gap-3 mb-12 overflow-x-auto justify-center pb-4 scrollbar-hide">
+                <button onclick="setFilter('الكل')" class="cat-btn active px-10 py-3 rounded-full text-[10px] font-black uppercase">الكل</button>
+                <button onclick="setFilter('تيشرتات')" class="cat-btn px-10 py-3 rounded-full text-[10px] font-black uppercase">تيشرتات</button>
+                <button onclick="setFilter('قمصان')" class="cat-btn px-10 py-3 rounded-full text-[10px] font-black uppercase">قمصان</button>
+                <button onclick="setFilter('بناطيل')" class="cat-btn px-10 py-3 rounded-full text-[10px] font-black uppercase">بناطيل</button>
+            </div>
+            <div id="products-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"></div>
+        </section>
+    </div>
+
+    <!-- Admin Section -->
+    <div id="admin-view" class="view-hidden pt-32 px-6 max-w-7xl mx-auto pb-40">
+        <div class="flex justify-between items-center mb-12">
+            <h2 class="text-5xl font-black uppercase italic tracking-tighter">Command Center</h2>
+            <button onclick="location.reload()" class="bg-white/10 px-6 py-2 rounded-full text-xs font-bold">خروج</button>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+            <div class="liquid-glass p-6 text-center">
+                <p class="text-[10px] uppercase opacity-40 font-bold mb-1">إجمالي المبيعات</p>
+                <p id="stat-sales" class="text-2xl font-black">0</p>
+            </div>
+            <div class="liquid-glass p-6 text-center">
+                <p class="text-[10px] uppercase opacity-40 font-bold mb-1">الطلبات</p>
+                <p id="stat-orders" class="text-2xl font-black">0</p>
+            </div>
+            <div class="liquid-glass p-6 text-center">
+                <p class="text-[10px] uppercase opacity-40 font-bold mb-1">المستخدمين</p>
+                <p id="stat-users" class="text-2xl font-black">0</p>
+            </div>
+            <div class="liquid-glass p-6 text-center">
+                <p class="text-[10px] uppercase opacity-40 font-bold mb-1">المنتجات</p>
+                <p id="stat-products" class="text-2xl font-black">0</p>
+            </div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="flex gap-8 mb-10 border-b border-white/10 pb-4">
+            <span onclick="switchTab('products')" id="tab-products" class="tab-btn active font-black uppercase text-xs tracking-widest">المنتجات</span>
+            <span onclick="switchTab('orders')" id="tab-orders" class="tab-btn font-black uppercase text-xs tracking-widest">الطلبات</span>
+            <span onclick="switchTab('users')" id="tab-users" class="tab-btn font-black uppercase text-xs tracking-widest">المستخدمين</span>
+        </div>
+
+        <!-- Tab: Products -->
+        <div id="panel-products" class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div class="lg:col-span-4">
+                <div class="liquid-glass p-8 sticky top-32">
+                    <form id="add-form" class="space-y-4">
+                        <input id="f-name" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none" placeholder="اسم المنتج" required>
+                        <input id="f-price" type="number" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none" placeholder="السعر" required>
+                        <select id="f-cat" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none">
+                            <option>تيشرتات</option><option>قمصان</option><option>بناطيل</option>
+                        </select>
+                        <input id="f-img" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none" placeholder="رابط الصورة" required>
+                        <button type="submit" class="w-full bg-white text-black py-4 rounded-xl font-black text-xs uppercase">إضافة للمتجر</button>
+                    </form>
+                </div>
+            </div>
+            <div id="admin-products-list" class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 h-fit"></div>
+        </div>
+
+        <!-- Tab: Orders -->
+        <div id="panel-orders" class="view-hidden space-y-4 h-fit">
+            <div id="admin-orders-list" class="grid gap-6 h-fit"></div>
+        </div>
+
+        <!-- Tab: Users -->
+        <div id="panel-users" class="view-hidden h-fit">
+            <div id="admin-users-list" class="grid gap-4 h-fit"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsExo8GR-YjB7FgpX3yDzVCiv3UADyDpQ",
+            authDomain: "coffee-spark-ai-barista-370d0.firebaseapp.com",
+            projectId: "coffee-spark-ai-barista-370d0",
+            storageBucket: "coffee-spark-ai-barista-370d0.firebasestorage.app",
+            messagingSenderId: "533681293642",
+            appId: "1:533681293642:web:fc1901fe139ff6156859b3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let products = [];
+        let orders = [];
+        let users = [];
+        let cart = [];
+        let currentFilter = "الكل";
+
+        // Admin Access
+        let pressTimer;
+        const logo = document.getElementById('logo-btn');
+        logo.addEventListener('mousedown', () => pressTimer = setTimeout(askAdmin, 1500));
+        logo.addEventListener('mouseup', () => clearTimeout(pressTimer));
+        logo.addEventListener('touchstart', () => pressTimer = setTimeout(askAdmin, 1500));
+        logo.addEventListener('touchend', () => clearTimeout(pressTimer));
+
+        function askAdmin() {
+            if(prompt("الباسورد:") === "Eslam@147") {
+                document.getElementById('user-view').classList.add('view-hidden');
+                document.getElementById('admin-view').classList.remove('view-hidden');
+            }
+        }
+
+        // Tabs Logic
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-'+tab).classList.add('active');
+            ['products', 'orders', 'users'].forEach(p => document.getElementById('panel-'+p).classList.add('view-hidden'));
+            document.getElementById('panel-'+tab).classList.remove('view-hidden');
+        };
+
+        // Cart Logic
+        window.toggleCart = (s) => document.getElementById('cart-sidebar').classList.toggle('cart-open', s);
+        window.addToCart = (id) => {
+            const p = products.find(i => i.id === id);
+            if(p) { cart.push(p); updateCartUI(); }
+        };
+        window.removeFromCart = (idx) => { cart.splice(idx, 1); updateCartUI(); };
+        function updateCartUI() {
+            const list = document.getElementById('cart-items');
+            list.innerHTML = cart.map((item, i) => `
+                <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl">
+                    <img src="${item.image}" class="w-12 h-12 rounded-lg object-cover">
+                    <div class="flex-1"><p class="font-bold text-xs">${item.name}</p></div>
+                    <button onclick="removeFromCart(${i})" class="opacity-30"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+            const total = cart.reduce((s, i) => s + parseFloat(i.price), 0);
+            document.getElementById('cart-total').innerText = total + " EGP";
+            document.getElementById('cart-badge').innerText = cart.length;
+            document.getElementById('cart-badge').classList.toggle('hidden', cart.length === 0);
+        }
+
+        window.placeOrder = async () => {
+            if(cart.length === 0) return;
+            const total = cart.reduce((s, i) => s + parseFloat(i.price), 0);
+            await addDoc(collection(db, 'es_orders'), {
+                items: cart,
+                total: total,
+                userId: auth.currentUser.uid,
+                status: 'معلق',
+                createdAt: serverTimestamp()
+            });
+            cart = []; updateCartUI(); toggleCart(false);
+            alert("تم إرسال طلبك بنجاح!");
+        };
+
+        // Admin Actions
+        window.deleteProduct = async (id) => { if(confirm('حذف؟')) await deleteDoc(doc(db, 'es_products', id)); };
+        window.deleteOrder = async (id) => { if(confirm('مسح الطلب؟')) await deleteDoc(doc(db, 'es_orders', id)); };
+
+        // Firebase Sync
+        onAuthStateChanged(auth, async (user) => {
+            if(!user) await signInAnonymously(auth);
+            else {
+                // تسجيل المستخدم
+                await setDoc(doc(db, 'es_users', user.uid), {
+                    uid: user.uid,
+                    lastActive: serverTimestamp()
+                });
+
+                // مزامنة المنتجات
+                onSnapshot(collection(db, 'es_products'), snap => {
+                    products = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    renderProducts();
+                    document.getElementById('stat-products').innerText = products.length;
+                });
+
+                // مزامنة الطلبات
+                onSnapshot(collection(db, 'es_orders'), snap => {
+                    orders = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    renderOrders();
+                    document.getElementById('stat-orders').innerText = orders.length;
+                    const totalSales = orders.reduce((s, o) => s + (o.total || 0), 0);
+                    document.getElementById('stat-sales').innerText = totalSales + " EGP";
+                });
+
+                // مزامنة المستخدمين
+                onSnapshot(collection(db, 'es_users'), snap => {
+                    users = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    renderUsers();
+                    document.getElementById('stat-users').innerText = users.length;
+                });
+            }
+        });
+
+        function renderProducts() {
+            const grid = document.getElementById('products-container');
+            const list = document.getElementById('admin-products-list');
+            const filtered = currentFilter === "الكل" ? products : products.filter(p => p.category === currentFilter);
+
+            grid.innerHTML = filtered.map(p => `
+                <div class="liquid-glass p-6">
+                    <img src="${p.image}" class="w-full aspect-[3/4] object-cover rounded-[1.5rem] mb-6 shadow-2xl">
+                    <h3 class="font-black text-xl mb-1">${p.name}</h3>
+                    <p class="text-[10px] opacity-40 font-bold mb-4 uppercase">${p.category}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="font-black">${p.price} EGP</span>
+                        <button onclick="addToCart('${p.id}')" class="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center transition active:scale-90"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+            `).join('');
+
+            list.innerHTML = products.map(p => `
+                <div class="liquid-glass p-4 flex justify-between items-center border-white/5">
+                    <div class="flex items-center gap-3">
+                        <img src="${p.image}" class="w-10 h-10 rounded object-cover">
+                        <p class="text-xs font-bold">${p.name}</p>
+                    </div>
+                    <button onclick="deleteProduct('${p.id}')" class="text-red-500 opacity-30"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function renderOrders() {
+            const list = document.getElementById('admin-orders-list');
+            list.innerHTML = orders.map(o => `
+                <div class="liquid-glass p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-white/10">
+                    <div>
+                        <p class="text-[10px] font-black opacity-30 uppercase mb-2">طلب جديد #${o.id.slice(0,5)}</p>
+                        <div class="flex gap-2">
+                            ${o.items.map(i => `<img src="${i.image}" class="w-8 h-8 rounded-full border border-white/20">`).join('')}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-black">${o.total} EGP</p>
+                        <button onclick="deleteOrder('${o.id}')" class="text-[10px] font-black uppercase text-red-500 mt-2">مسح الطلب</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderUsers() {
+            const list = document.getElementById('admin-users-list');
+            list.innerHTML = users.map(u => `
+                <div class="liquid-glass p-4 flex justify-between items-center opacity-60">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                        <p class="text-[10px] font-mono tracking-tighter">USER_ID: ${u.uid}</p>
+                    </div>
+                    <p class="text-[10px] opacity-40 font-black">ACTIVE</p>
+                </div>
+            `).join('');
+        }
+
+        window.setFilter = (c) => {
+            currentFilter = c;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.innerText === c));
+            renderProducts();
+        }
+
+        document.getElementById('add-form').onsubmit = async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, 'es_products'), {
+                name: document.getElementById('f-name').value,
+                price: document.getElementById('f-price').value,
+                category: document.getElementById('f-cat').value,
+                image: document.getElementById('f-img').value,
+                createdAt: serverTimestamp()
+            });
+            e.target.reset();
+        }
+    </script>
+</body>
+</html>
